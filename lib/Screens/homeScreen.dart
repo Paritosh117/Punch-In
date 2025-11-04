@@ -17,6 +17,8 @@ class _PunchScreenState extends State<PunchScreen> {
   LatLng? currentLocation;
   final double designatedLat = 21.23456; // Example designated location
   final double designatedLng = 81.65432;
+  // final double designatedLat = 21.26; // Example designated location
+  // final double designatedLng = -81.63;
   bool canPunch = false;
 
   @override
@@ -80,27 +82,41 @@ class _PunchScreenState extends State<PunchScreen> {
     print("Distance to designated location: $distanceInMeters meters");
 
     setState(() {
-      canPunch = distanceInMeters <= 3000; // enable button if within 3 km
+      canPunch = distanceInMeters <= 1000; // enable button if within 1 km
     });
   }
 
   void _punchIn() async {
-    if (currentLocation == null) return;
+    try {
+      // Get updated current location before punching in
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
 
-    final now = DateTime.now();
-    final punchString =
-        "${now.toIso8601String()} | Lat: ${currentLocation!.latitude} | Lng: ${currentLocation!.longitude}";
+      final now = DateTime.now();
+      final punchString =
+          "${now.toIso8601String()} | Lat: ${position.latitude} | Lng: ${position.longitude}";
 
-    final punch = PunchesModel(time: punchString,latitude: currentLocation!.latitude,longitude: currentLocation!.longitude,address: '${currentLocation!.latitude}${currentLocation!.longitude}');
+      final punch = PunchesModel(
+        time: punchString,
+        latitude: position.latitude,
+        longitude: position.longitude,
+        address: '${position.latitude}, ${position.longitude}',
+      );
 
-    await EmployeeDatabase.savePunch(punch); // Save in Hive
+      await EmployeeDatabase.savePunch(punch); // Save in Hive
 
-    print("Punch saved locally: $punchString");
+      print("Punch saved locally: $punchString");
 
-    // Optional: show a confirmation
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Punch saved successfully!")),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Punch saved successfully!")),
+      );
+    } catch (e) {
+      print("Error fetching location: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to get location: $e")),
+      );
+    }
   }
 
   @override
