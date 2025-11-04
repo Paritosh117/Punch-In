@@ -3,7 +3,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hive/hive.dart';
 import 'package:punch_in/Modal/database.dart';
-
 import '../Modal/PunchesModel.dart';
 
 class PunchHistoryScreen extends StatefulWidget {
@@ -87,7 +86,7 @@ class _PunchHistoryScreenState extends State<PunchHistoryScreen> {
 // Animate camera after state updates
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _moveCameraToInitialPosition();
-          });// 🔹 Collect points for polyline
+          }); // 🔹 Collect points for polyline
         }
       }
     }
@@ -107,6 +106,7 @@ class _PunchHistoryScreenState extends State<PunchHistoryScreen> {
 
     setState(() {});
   }
+
   void _moveCameraToInitialPosition() {
     if (mapController != null) {
       if (recentPunches.isNotEmpty && markers.isNotEmpty) {
@@ -153,6 +153,7 @@ class _PunchHistoryScreenState extends State<PunchHistoryScreen> {
       currentLocation = LatLng(position.latitude, position.longitude);
     });
   }
+
   @override
   Widget build(BuildContext context) {
     final hasData = markers.isNotEmpty;
@@ -168,82 +169,79 @@ class _PunchHistoryScreenState extends State<PunchHistoryScreen> {
               child: Text("Clear"))
         ],
       ),
-      body:Column(
-    children: [
-    // 🔹 Map at the top
-    SizedBox(
-    height: 300, // adjust as needed
-      child:
-      GoogleMap(
-        initialCameraPosition: CameraPosition(
-          target: currentLocation ?? const LatLng(20.5937, 78.9629),
-          zoom: 12,
-        ),
-        markers: markers,
-        polylines: polylines,
-        myLocationEnabled: true,
-        onMapCreated: (controller) {
-          mapController = controller;
-          _moveCameraToInitialPosition(); // ensure proper centering
-        },
-      )
+      body: Column(
+        children: [
+          // 🔹 Map at the top
+          SizedBox(
+              height: 300, // adjust as needed
+              child: GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: currentLocation ?? const LatLng(20.5937, 78.9629),
+                  zoom: 12,
+                ),
+                markers: markers,
+                polylines: polylines,
+                myLocationEnabled: true,
+                onMapCreated: (controller) {
+                  mapController = controller;
+                  _moveCameraToInitialPosition(); // ensure proper centering
+                },
+              )),
 
-    ),
+          const SizedBox(height: 10),
 
-    const SizedBox(height: 10),
+          // 🔹 Punch list below
+          Expanded(
+            child: recentPunches.isEmpty
+                ? const Center(
+                    child: Text(
+                      "No Punches Recorded",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: recentPunches.length,
+                    itemBuilder: (context, index) {
+                      final punch = recentPunches[index];
+                      final parts = punch.time.split('|');
+                      final dateTimePart = parts[0].trim();
+                      final latPart = parts.length > 1
+                          ? parts[1].replaceAll("Lat:", "").trim()
+                          : "";
+                      final lngPart = parts.length > 2
+                          ? parts[2].replaceAll("Lng:", "").trim()
+                          : "";
 
-    // 🔹 Punch list below
-    Expanded(
-    child: recentPunches.isEmpty
-    ? const Center(
-    child: Text(
-    "No Punches Recorded",
-    style: TextStyle(fontSize: 16),
-    ),
-    )
-        : ListView.builder(
-    itemCount: recentPunches.length,
-    itemBuilder: (context, index) {
-    final punch = recentPunches[index];
-    final parts = punch.time.split('|');
-    final dateTimePart = parts[0].trim();
-    final latPart = parts.length > 1
-    ? parts[1].replaceAll("Lat:", "").trim()
-        : "";
-    final lngPart = parts.length > 2
-    ? parts[2].replaceAll("Lng:", "").trim()
-        : "";
+                      DateTime? parsedDate;
+                      try {
+                        parsedDate = DateTime.parse(dateTimePart);
+                      } catch (_) {}
 
-    DateTime? parsedDate;
-    try {
-    parsedDate = DateTime.parse(dateTimePart);
-    } catch (_) {}
+                      final date = parsedDate != null
+                          ? "${parsedDate.day}-${parsedDate.month}-${parsedDate.year}"
+                          : dateTimePart;
+                      final time = parsedDate != null
+                          ? "${parsedDate.hour}:${parsedDate.minute.toString().padLeft(2, '0')}"
+                          : "";
 
-    final date = parsedDate != null
-    ? "${parsedDate.day}-${parsedDate.month}-${parsedDate.year}"
-        : dateTimePart;
-    final time = parsedDate != null
-    ? "${parsedDate.hour}:${parsedDate.minute.toString().padLeft(2, '0')}"
-        : "";
-
-    return Card(
-    margin:
-    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    child: ListTile(
-    leading:
-    const Icon(Icons.location_on, color: Colors.blue),
-    title: Text(
-    "Date: $date  |  Time: $time",
-    style: const TextStyle(fontWeight: FontWeight.bold),
-    ),
-    subtitle: Text("Lat: $latPart, Lng: $lngPart"),
-    ),
-    );
-    },
-    ),
-    ),
-    ],
-    ),
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        child: ListTile(
+                          leading:
+                              const Icon(Icons.location_on, color: Colors.blue),
+                          title: Text(
+                            "Date: $date  |  Time: $time",
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text("Lat: $latPart, Lng: $lngPart"),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
